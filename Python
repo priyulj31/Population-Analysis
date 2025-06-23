@@ -1,0 +1,83 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import plotly.express as px
+
+# Load data
+df = pd.read_csv("world_population_data.csv")
+
+# Clean column names
+df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+# Basic info
+print(df.head())
+print(df.info())
+print(df.describe())
+
+# Handle missing values
+df.fillna(method='ffill', inplace=True)
+
+# ------------------------ KPI Section ------------------------
+print("🔹 Number of unique countries:", df['country'].nunique())
+print("🔹 Date range:", df['year'].min(), "to", df['year'].max())
+
+# ------------------------ Population Trend Over Time ------------------------
+plt.figure(figsize=(14, 6))
+top_countries = df.groupby('country')['population'].max().sort_values(ascending=False).head(10).index
+for country in top_countries:
+    country_data = df[df['country'] == country]
+    plt.plot(country_data['year'], country_data['population'], label=country)
+
+plt.title('Top 10 Countries by Population Over Time')
+plt.xlabel('Year')
+plt.ylabel('Population')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# ------------------------ Population by Continent ------------------------
+latest_year = df['year'].max()
+latest_df = df[df['year'] == latest_year]
+
+continent_pop = latest_df.groupby('continent')['population'].sum().reset_index()
+fig = px.pie(continent_pop, values='population', names='continent', title='Population Share by Continent')
+fig.show()
+
+# ------------------------ Population vs GDP ------------------------
+fig = px.scatter(latest_df, x='gdp', y='population', color='continent',
+                 size='population', hover_name='country',
+                 title=f'Population vs GDP ({latest_year})', log_x=True)
+fig.show()
+
+# ------------------------ Life Expectancy vs Fertility Rate ------------------------
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=latest_df, x='fertility_rate', y='life_expectancy', hue='continent')
+plt.title('Life Expectancy vs Fertility Rate by Continent')
+plt.xlabel('Fertility Rate')
+plt.ylabel('Life Expectancy')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# ------------------------ Heatmap of Correlation ------------------------
+plt.figure(figsize=(10, 6))
+correlation = latest_df[['population', 'gdp', 'life_expectancy', 'fertility_rate']].corr()
+sns.heatmap(correlation, annot=True, cmap='coolwarm')
+plt.title('Correlation Heatmap (Latest Year)')
+plt.tight_layout()
+plt.show()
+
+# ------------------------ Top 10 Populous Countries ------------------------
+top_pop = latest_df.sort_values(by='population', ascending=False).head(10)
+print("📊 Top 10 Countries by Population:\n", top_pop[['country', 'population']])
+
+# ------------------------ Trend: Global Population ------------------------
+global_trend = df.groupby('year')['population'].sum().reset_index()
+plt.figure(figsize=(12, 5))
+sns.lineplot(data=global_trend, x='year', y='population')
+plt.title("Global Population Trend")
+plt.xlabel("Year")
+plt.ylabel("Total Population")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
